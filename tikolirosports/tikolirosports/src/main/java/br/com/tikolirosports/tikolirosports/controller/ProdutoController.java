@@ -8,10 +8,16 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/produtos")
@@ -69,6 +75,34 @@ public class ProdutoController {
     @DeleteMapping("/{id}")
     public void deletar(@PathVariable Long id) {
         produtoRepository.deleteById(id);
+    }
+
+    @PostMapping("/{id}/imagem")
+    public ResponseEntity<?> uploadImagem(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file
+    ) throws IOException {
+
+        Produto produto = produtoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+
+        // Nome único
+        String nomeArquivo = UUID.randomUUID() + "_" + file.getOriginalFilename();
+
+        // Caminho absoluto garantido
+        String pastaUploads = System.getProperty("user.dir") + "/uploads/produtos/";
+
+        Path diretorio = Paths.get(pastaUploads);
+        Files.createDirectories(diretorio);
+
+        Path caminhoArquivo = diretorio.resolve(nomeArquivo);
+
+        Files.write(caminhoArquivo, file.getBytes());
+
+        produto.setImagemUrl("/uploads/produtos/" + nomeArquivo);
+        produtoRepository.save(produto);
+
+        return ResponseEntity.ok().build();
     }
 
 }
