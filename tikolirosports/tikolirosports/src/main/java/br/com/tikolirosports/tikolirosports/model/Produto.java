@@ -28,7 +28,7 @@ public class Produto {
     private Double precoVenda;
     private Integer estoqueAtual;
     private Integer estoqueMinimo;
-
+    private String cor;
     private String imagemUrl; // opcional
 
     // 🔗 Associação com Categoria

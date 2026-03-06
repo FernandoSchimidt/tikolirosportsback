@@ -5,10 +5,13 @@ import br.com.tikolirosports.tikolirosports.model.Pedido;
 import br.com.tikolirosports.tikolirosports.repository.PedidoRepository;
 import br.com.tikolirosports.tikolirosports.service.PedidoService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.util.Date;
 import java.util.List;
 
 @RestController
@@ -28,6 +31,36 @@ public class PedidoController {
     @GetMapping
     public List<Pedido> listar() {
         return pedidoService.listarTodos();
+    }
+
+    @GetMapping("/periodo")
+    public List<Pedido> buscarPorPeriodo(
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate inicio,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate fim,
+            @RequestParam(required = false) Long clienteId) {
+
+        if (inicio != null && fim != null && clienteId != null) {
+            return pedidoRepository
+                    .findByClienteIdAndDataPedidoBetween(
+                            clienteId,
+                            inicio.atStartOfDay(),
+                            fim.atTime(23,59,59)
+                    );
+        }
+
+        if (inicio != null && fim != null) {
+            return pedidoRepository
+                    .findByDataPedidoBetween(
+                            inicio.atStartOfDay(),
+                            fim.atTime(23,59,59)
+                    );
+        }
+
+        if (clienteId != null) {
+            return pedidoRepository.findByClienteId(clienteId);
+        }
+
+        return pedidoRepository.findAll();
     }
 
     @GetMapping("/{id}")

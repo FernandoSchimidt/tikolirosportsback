@@ -1,7 +1,10 @@
 package br.com.tikolirosports.tikolirosports.model;
 
+import br.com.tikolirosports.tikolirosports.Enums.StatusPedido;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -21,19 +24,25 @@ public class Pedido {
 
     private LocalDateTime dataPedido;
 
-    private String status; // EX: "NOVO", "PAGO-PARCIAL", "PAGO", "ENTREGUE", "CANCELADO"
+    @Enumerated(EnumType.STRING)
+    private StatusPedido status;
 
     private Double valorTotal = 0.0;
 
     private Double valorPago = 0.0;
 
-    private String formaPagamento; // PIX, DINHEIRO, CARTAO, PARCIAL, etc.
+    private String formaPagamento;
 
-    private boolean encomenda; // true = sob demanda
+    private boolean encomenda;
 
     @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ItemPedido> itens;
 
     @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL)
     private List<PagamentoPedido> pagamentos;
+
+    @PrePersist
+    public void prePersist() {
+        this.dataPedido = LocalDateTime.now();
+    }
 }

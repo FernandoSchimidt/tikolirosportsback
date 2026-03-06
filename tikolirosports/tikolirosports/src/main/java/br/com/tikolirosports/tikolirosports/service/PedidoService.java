@@ -1,5 +1,6 @@
 package br.com.tikolirosports.tikolirosports.service;
 
+import br.com.tikolirosports.tikolirosports.Enums.StatusPedido;
 import br.com.tikolirosports.tikolirosports.model.*;
 import br.com.tikolirosports.tikolirosports.repository.MovimentoEstoqueRepository;
 import br.com.tikolirosports.tikolirosports.repository.PagamentoPedidoRepository;
@@ -23,37 +24,44 @@ public class PedidoService {
 
     @Transactional
     public Pedido criarPedido(Pedido pedido) {
+
+        if (pedido.getItens() == null || pedido.getItens().isEmpty()) {
+            throw new RuntimeException("Pedido sem itens");
+        }
+
         double total = 0.0;
 
         for (ItemPedido item : pedido.getItens()) {
+
             Produto produto = produtoRepository.findById(item.getProduto().getId())
-                    .orElseThrow(() -> new RuntimeException("Produto não encontrado: " + item.getProduto().getId()));
+                    .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+
+            if (produto.getEstoqueAtual() < item.getQuantidade()) {
+                throw new RuntimeException("Estoque insuficiente para o produto: " + produto.getNome());
+            }
 
             double subtotal = item.getQuantidade() * item.getPrecoUnitario();
             total += subtotal;
 
-            // Baixa automática de estoque
             produto.setEstoqueAtual(produto.getEstoqueAtual() - item.getQuantidade());
             produtoRepository.save(produto);
 
-            // Registra movimento no histórico
             MovimentoEstoque movimento = MovimentoEstoque.builder()
                     .tipo("SAIDA")
                     .quantidade(item.getQuantidade())
-                    .descricao("Baixa automática do Pedido")
+                    .descricao("Pedido " + pedido.getId())
                     .dataMovimento(LocalDateTime.now())
                     .produto(produto)
                     .build();
 
             movimentoRepository.save(movimento);
 
-            // Vincula item ao pedido
             item.setPedido(pedido);
         }
 
         pedido.setDataPedido(LocalDateTime.now());
         pedido.setValorTotal(total);
-        pedido.setStatus("NOVO");
+        pedido.setStatus(StatusPedido.NOVO);
 
         return pedidoRepository.save(pedido);
     }
@@ -73,9 +81,9 @@ public class PedidoService {
         pedido.setValorPago(soma);
 
         if (Double.compare(soma, pedido.getValorTotal()) >= 0) {
-            pedido.setStatus("PAGO");
+            pedido.setStatus(StatusPedido.PAGO);
         } else {
-            pedido.setStatus("PAGO-PARCIAL");
+            pedido.setStatus(StatusPedido.PAGO_PARCIAL);
         }
         pedidoRepository.save(pedido);
         return salvo;
@@ -103,7 +111,7 @@ public class PedidoService {
                 movimentoRepository.save(mov);
             }
         }
-        pedido.setStatus("ENTREGUE");
+        pedido.setStatus(StatusPedido.ENTREGUE);
         return pedidoRepository.save(pedido);
     }
 
